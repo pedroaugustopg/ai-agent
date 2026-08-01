@@ -1,0 +1,41 @@
+# AI / Vector Database
+chroma_db/
+vectorstore/
+faiss_index/
+embeddings/
+data/
+
+# Virtual Environment
+.venv/
+.env
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# VS Code
+.vscode/
