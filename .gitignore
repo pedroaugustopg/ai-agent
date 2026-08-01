@@ -12,6 +12,7 @@ data/
 # IntelliJ IDEA
 .idea/
 *.iml
+base/*.pdf
 
 # Python
 __pycache__/
