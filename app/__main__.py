@@ -1,17 +1,22 @@
 from pathlib import Path
 
-from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_chroma import Chroma
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import ChatOllama
 
-load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHROMA_DB = BASE_DIR / "chroma_db"
 
 PROMPT_TEMPLATE = """
-Answer the user's question based only on the information below.
+You are an AI assistant.
+
+Answer the user's question using ONLY the information contained in the knowledge base below.
+
+If the answer is not present in the knowledge base, answer exactly:
+
+"I could not find this information in the knowledge base."
 
 Knowledge Base:
 {knowledge_base}
@@ -20,44 +25,58 @@ Question:
 {question}
 """
 
-
 def question():
+
     user_question = input("Write your question: ")
 
-    embedding_function = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+
     database = Chroma(
         persist_directory=str(CHROMA_DB),
-        embedding_function=embedding_function
+        embedding_function=embeddings
     )
 
-    results = database.similarity_search_with_relevance_scores(
-        user_question,
-        k=4
+    retriever = database.as_retriever(
+        search_kwargs={"k": 4}
     )
 
-    if len(results) == 0 or results[0][1] < 0.7:
-        print("Could not find relevant information in the database.")
+    documents = retriever.invoke(user_question)
+
+    if not documents:
+        print("No relevant information was found.")
         return
 
-    knowledge_base = "\n\n----\n\n".join(
-        result[0].page_content for result in results
+    knowledge_base = "\n\n------------------------\n\n".join(
+        document.page_content for document in documents
     )
 
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
 
-    messages = prompt.invoke({
-        "question": user_question,
-        "knowledge_base": knowledge_base
-    })
+    messages = prompt.invoke(
+        {
+            "question": user_question,
+            "knowledge_base": knowledge_base
+        }
+    )
 
-    model = ChatOpenAI()
+    model = ChatOllama(
+        model="llama3.1",
+        temperature=0
+    )
 
-    response = model.invoke(messages)
+    try:
+        response = model.invoke(messages)
 
-    print("\nAI Response:\n")
-    print(response.content)
+        print("\nAI Response:\n")
+        print(response.content)
+
+    except Exception:
+        print(
+            "Ollama is not running. Install Ollama and start a local model before executing."
+        )
 
 
 if __name__ == "__main__":
     question()
-
